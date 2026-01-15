@@ -35,18 +35,28 @@ fi
 ../magiskboot hexpatch system/bin/recovery e0031f2a8e000014 200080528e000014
 ../magiskboot hexpatch system/bin/recovery 41010054a0020012f44f48a9 4101005420008052f44f48a9
 ../magiskboot cpio "$ramdisk" 'add 0755 system/bin/recovery system/bin/recovery'
+# 1. Repack the image
 ../magiskboot repack ../r.img new-boot.img
-# Get current size
-SIZE=$(stat -c%s new-boot.img)
-echo "Current size: $SIZE"
 
-# Calculate padding needed to reach multiple of 4096
+# 2. Move it to the main folder immediately (Overwriting any old file)
+mv new-boot.img ../recovery-patched.img
+
+# 3. Go to the main folder so we are looking at the SAME file as avbtool
+cd ..
+
+# 4. Calculate the padding needed
+SIZE=$(stat -c%s recovery-patched.img)
+echo "Original size: $SIZE"
 REM=$((SIZE % 4096))
+
 if [ "$REM" -ne "0" ]; then
     NEED=$((4096 - REM))
-    echo "Padding with $NEED bytes..."
-    dd if=/dev/zero bs=1 count=$NEED >> new-boot.img
+    echo "Padding with $NEED bytes to make it align to 4096..."
+    dd if=/dev/zero bs=1 count=$NEED >> recovery-patched.img
+else
+    echo "File is already aligned. No padding needed."
 fi
 
-# Copy the fixed file
-cp new-boot.img ../recovery-patched.img
+# 5. Verify final size
+NEW_SIZE=$(stat -c%s recovery-patched.img)
+echo "Final size: $NEW_SIZE"
