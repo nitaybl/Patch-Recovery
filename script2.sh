@@ -36,5 +36,17 @@ fi
 ../magiskboot hexpatch system/bin/recovery 41010054a0020012f44f48a9 4101005420008052f44f48a9
 ../magiskboot cpio "$ramdisk" 'add 0755 system/bin/recovery system/bin/recovery'
 ../magiskboot repack ../r.img new-boot.img
-truncate -s %4096 new-boot.img
+# Get current size
+SIZE=$(stat -c%s new-boot.img)
+echo "Current size: $SIZE"
+
+# Calculate padding needed to reach multiple of 4096
+REM=$((SIZE % 4096))
+if [ "$REM" -ne "0" ]; then
+    NEED=$((4096 - REM))
+    echo "Padding with $NEED bytes..."
+    dd if=/dev/zero bs=1 count=$NEED >> new-boot.img
+fi
+
+# Copy the fixed file
 cp new-boot.img ../recovery-patched.img
